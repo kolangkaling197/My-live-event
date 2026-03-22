@@ -1,39 +1,57 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Player - Shaka</title>
-    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/controls.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
-    <style>
-        body { margin: 0; background: #000; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        .video-container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
-    </style>
+  <meta charset="UTF-8">
+  <title>HLS Player + Refresh Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .refresh-container {
+      width: 100%;
+      background: #222;
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .refresh-container button {
+      background-color: #00aaff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    video {
+      width: 100vw;
+      height: 56.25vw; /* 16:9 */
+      background: #000;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="video-container" data-shaka-player-container>
-        <video autoplay id="video" style="width:100%;height:100%"></video>
-    </div>
+<div class="refresh-container">
+  <button onclick="location.reload();">Refresh Halaman</button>
+</div>
 
-    <script>
-        const manifestUri = 'https://raw.githubusercontent.com/kolangkaling197/live/refs/heads/main/AP1.m3u8';
-        
-        // Konfigurasi ClearKey (KeyId:Key)
-        const clearKeys = {
-            '11223344556677889900112233445566': '4b80724d0ef86bcb2c21f7999d67739d'
-        };
+<video controls autoplay muted playsinline src="https://raw.githubusercontent.com/kolangkaling197/live/refs/heads/main/AP1.m3u8">
+  Browser Anda tidak mendukung HLS.
+</video>
 
-        async function initPlayer() {
-            shaka.polyfill.installAll();
+</body>
+</html>
 
-            const video = document.getElementById('video');
-            const ui = video['ui'];
-            const controls = ui.getControls();
-            const player = controls.getPlayer();
-
-            player.configure({
                 drm: {
                     clearKeys: clearKeys
                 },

@@ -1,39 +1,56 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
+    <title>Nova Sport 2 - GitHub Player</title>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <style>
-      body { margin: 0; background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-      .video-container { width: 80%; max-width: 800px; }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
     </style>
-  </head>
-  <body>
-
-    <div class="video-container" data-shaka-player-container>
-      <video autoplay id="video" style="width:100%;height:100%"></video>
+</head>
+<body>
+    <div class="container" data-shaka-player-container>
+        <video autoplay id="video" style="width:100%;height:100%"></video>
     </div>
 
     <script>
-      const manifestUri = 'https://dash2.antik.sk/stream/nvidia_nova_sport2/playlist_cenc.mpd';
-      const clearKeyId = '11223344556677889900112233445566';
-      const clearKeyValue = '4b80724d0ef86bcb2c21f7999d67739d';
+        // Menggunakan proxy publik agar tidak kena blokir CORS GitHub
+        const proxy = "https://corsproxy.io/?";
+        const manifestUri = proxy + encodeURIComponent('https://dash2.antik.sk/stream/nvidia_nova_sport2/playlist_cenc.mpd');
+        
+        const clearKeyId = '11223344556677889900112233445566';
+        const clearKeyValue = '4b80724d0ef86bcb2c21f7999d67739d';
 
-      async function initApp() {
-        // Install built-in polyfills to patch browser incompatibilities.
-        shaka.polyfil.installAll();
+        async function init() {
+            shaka.polyfill.installAll();
+            const video = document.getElementById('video');
+            const ui = video['ui'];
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
 
-        // Check to see if the browser supports the basic APIs.
-        if (shaka.Player.isBrowserSupported()) {
-          initPlayer();
-        } else {
-          console.error('Browser not supported!');
+            player.configure({
+                drm: { clearKeys: { [clearKeyId]: clearKeyValue } }
+            });
+
+            // Filter agar tiap segmen video juga lewat proxy
+            player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    request.uris[0] = proxy + encodeURIComponent(request.uris[0]);
+                }
+            });
+
+            try {
+                await player.load(manifestUri);
+            } catch (e) {
+                console.error('Error:', e);
+            }
         }
-      }
 
-      async function initPlayer() {
-        const video = document.getElementById('video');
-        const ui = video['ui'];
+        document.addEventListener('shaka-ui-loaded', init);
+    </script>
+</body>
+</html>
         const controls = ui.getControls();
         const player = controls.getPlayer();
 

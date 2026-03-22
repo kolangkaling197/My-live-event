@@ -1,39 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Nova Sport 2 - GitHub Player</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS Player - Shaka</title>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
+        body { margin: 0; background: #000; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .video-container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
     </style>
 </head>
 <body>
-    <div class="container" data-shaka-player-container>
+
+    <div class="video-container" data-shaka-player-container>
         <video autoplay id="video" style="width:100%;height:100%"></video>
     </div>
 
     <script>
-        // Menggunakan proxy publik agar tidak kena blokir CORS GitHub
-        const proxy = "https://corsproxy.io/?";
-        const manifestUri = proxy + encodeURIComponent('https://dash2.antik.sk/stream/nvidia_nova_sport2/playlist_cenc.mpd');
+        const manifestUri = 'https://raw.githubusercontent.com/kolangkaling197/live/refs/heads/main/AP1.m3u8';
         
-        const clearKeyId = '11223344556677889900112233445566';
-        const clearKeyValue = '4b80724d0ef86bcb2c21f7999d67739d';
+        // Konfigurasi ClearKey (KeyId:Key)
+        const clearKeys = {
+            '11223344556677889900112233445566': '4b80724d0ef86bcb2c21f7999d67739d'
+        };
 
-        async function init() {
+        async function initPlayer() {
             shaka.polyfill.installAll();
+
             const video = document.getElementById('video');
             const ui = video['ui'];
             const controls = ui.getControls();
             const player = controls.getPlayer();
 
             player.configure({
-                drm: { clearKeys: { [clearKeyId]: clearKeyValue } }
+                drm: {
+                    clearKeys: clearKeys
+                },
+                manifest: {
+                    // Penting: Memastikan Shaka Player mencoba memproses HLS secara native atau via MediaSource
+                    hls: {
+                        useFullMimeTypeForInBandText: true
+                    }
+                }
             });
 
-            // Filter agar tiap segmen video juga lewat proxy
+            try {
+                // Memuat manifest HLS
+                await player.load(manifestUri);
+                console.log('HLS Stream Berhasil Dimuat');
+            } catch (error) {
+                console.error('Terjadi kesalahan:', error);
+                
+                // Jika error 4001, berarti ada masalah pada dekripsi (Key salah atau expired)
+                if (error.code === 4001) {
+                    console.error('Kesalahan DRM: Cek kembali KeyId dan Key Anda.');
+                }
+            }
+        }
+
+        document.addEventListener('shaka-ui-loaded', initPlayer);
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window['shaka-ui-loaded']) initPlayer();
+        });
+    </script>
+</body>
+</html>
             player.getNetworkingEngine().registerRequestFilter((type, request) => {
                 if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
                     request.uris[0] = proxy + encodeURIComponent(request.uris[0]);

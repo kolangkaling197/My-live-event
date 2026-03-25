@@ -2,94 +2,99 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DASH DRM ClearKey Player</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/controls.css">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>Shaka Player - Fullscreen 16:9</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/shaka-player.ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/controls.min.css">
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        .container { width: 100%; max-width: 800px; }
-        video { width: 100%; height: auto; }
-        .info { padding: 20px; text-align: center; }
-        .status { color: #0f0; font-size: 0.9em; margin-top: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: black;
+            touch-action: none;
+            overscroll-behavior: contain;
+        }
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: black;
+        }
+        #video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background: black;
+        }
+        /* Pastikan kontrol tetap ada saat disentuh */
+        .shaka-controls-container {
+            opacity: 1 !important;
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div data-shaka-player-container>
-        <video autoplay data-shaka-player id="video"></video>
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
     </div>
-    <div class="info">
-        <h3>Memutar: MNCTV (DASH + DRM)</h3>
-        <div id="status" class="status">Menunggu inisialisasi...</div>
-    </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/shaka-player.compiled.debug.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/controls.js"></script>
+    <script>
+        async function initPlayer() {
+            const video = document.getElementById('video');
+            const videoContainer = document.querySelector('.video-container');
+            const ui = new shaka.ui.Overlay(new shaka.Player(video), videoContainer, video);
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
 
-<script>
-    // URL dari Cloudflare Worker Anda
-    const manifestUri = 'https://superhyper.asique121212.workers.dev/?type=stream';
-    const clearKeyString = 'c3004565365a42d08e3bde39a516d64e:dbfdc0967cfbbed01dba730c99d9c14a';
-
-    async function initApp() {
-        // Install built-in polyfills untuk kompatibilitas browser
-        shaka.polyfill.installAll();
-
-        if (shaka.Player.isBrowserSupported()) {
-            initPlayer();
-        } else {
-            document.getElementById('status').innerText = 'Browser tidak mendukung Shaka Player!';
-        }
-    }
-
-    async function initPlayer() {
-        const video = document.getElementById('video');
-        const ui = video['ui'];
-        const player = new shaka.Player(video);
-        const statusEl = document.getElementById('status');
-
-        // Pisahkan KID dan KEY dari string
-        const [kid, key] = clearKeyString.split(':');
-
-        // Konfigurasi DRM ClearKey
-        player.configure({
-            drm: {
-                clearKeys: {
-                    [kid]: key
+            player.configure({
+                drm: {
+                    clearKeys: {
+                        "3fb40d85724942f994d86943f48021db": "a6da8742502c8a2153067f5f2a70fb02"
+                    }
                 }
+            });
+
+            try {
+                await player.load("https://mag04.tvx.prd.tv.odido.nl/wh7f454c46tw865586829_-819821292/PLTV/86/224/3221241610/3221241610.mpd?accountinfo=~~V2.0~LNS2PBO5tyhp5z1Pe6ObBA6cd7a4ec35c4492167b9376e6dff2932~BZw2dESHw-I1PQCFh9gGxCMvrIIzgMdYAe900qj8l6aoXUX9ahyR6I9EUIu7nDR4f4887615c83ea7a8cee6dd33137c4ebe:UTC,");
+                console.log("Video siap diputar!");
+                video.muted = false; // Auto-unmute
+                video.play(); // Paksa play jika diperlukan
+            } catch (e) {
+                console.error("Gagal memuat video:", e);
             }
-        });
 
-        // Tambahkan Request Filter untuk menyisipkan Referer (Opsional di browser tertentu)
-        player.getNetworkingEngine().registerRequestFilter((type, request) => {
-            if (type == shaka.net.NetworkingEngine.RequestType.MANIFEST || 
-                type == shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                // Catatan: Browser biasanya melarang modifikasi Referer via JS karena alasan keamanan.
-                // Itulah sebabnya Proxy di Cloudflare Worker sangat penting.
-            }
-        });
+            // Pastikan kontrol muncul saat disentuh
+            videoContainer.addEventListener("click", () => {
+                document.querySelector(".shaka-controls-container").style.opacity = "1";
+            });
 
-        // Listen untuk error
-        player.addEventListener('error', (event) => {
-            console.error('Error code', event.detail.code, 'object', event.detail);
-            statusEl.innerText = 'Error: ' + event.detail.code + ' (Cek Console)';
-            statusEl.style.color = 'red';
-        });
-
-        try {
-            statusEl.innerText = 'Memuat Manifest...';
-            await player.load(manifestUri);
-            statusEl.innerText = 'Video Berhasil Dimuat!';
-        } catch (e) {
-            console.error('Load failed', e);
+            // Sembunyikan kontrol setelah beberapa detik tidak digunakan
+            let timeout;
+            videoContainer.addEventListener("mousemove", () => {
+                clearTimeout(timeout);
+                document.querySelector(".shaka-controls-container").style.opacity = "1";
+                timeout = setTimeout(() => {
+                    document.querySelector(".shaka-controls-container").style.opacity = "0";
+                }, 3000); // Sembunyikan setelah 3 detik tidak digunakan
+            });
         }
-    }
 
-    document.addEventListener('shaka-ui-loaded', initApp);
-    document.addEventListener('DOMContentLoaded', initApp);
-</script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initPlayer();
+        });
+
+    </script>
 
 </body>
-</html>
+</html> 

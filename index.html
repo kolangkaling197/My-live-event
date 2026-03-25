@@ -48,10 +48,7 @@
     </div>
 
     <script>
-    // URL Worker Anda (PASTIKAN SUDAH SESUAI)
     const workerUrl = "https://superhyper.asique121212.workers.dev/?proxy=";
-    
-    // Link asli MNCTV
     const manifestUrl = "https://d2xz2v5wuvgur6.cloudfront.net/out/v1/d6b026ad50f14b7f9af5ddd5450007d4/index.mpd";
     
     const drmConfig = {
@@ -71,17 +68,21 @@
             }
         });
 
-        // FILTER PENTING: Mengarahkan semua request manifest & segment lewat Cloudflare Worker
+        // FILTER DIPERBAIKI: Mencegah Double Proxy
         player.getNetworkingEngine().registerRequestFilter((type, request) => {
-            // Bungkus URL asli ke dalam URL Worker
             const originalUrl = request.uris[0];
-            request.uris[0] = workerUrl + encodeURIComponent(originalUrl);
+            
+            // Hanya bungkus jika URL mengandung 'cloudfront.net' 
+            // DAN belum mengandung 'workers.dev'
+            if (originalUrl.includes('cloudfront.net') && !originalUrl.includes('workers.dev')) {
+                request.uris[0] = workerUrl + encodeURIComponent(originalUrl);
+            }
         });
 
         try {
-            // Muat manifest melalui worker
+            // Muat manifest pertama kali lewat worker
             await player.load(workerUrl + encodeURIComponent(manifestUrl));
-            console.log("MNCTV Berhasil Dimuat via Proxy!");
+            console.log("MNCTV Berhasil Dimuat!");
             video.muted = false;
         } catch (e) {
             console.error("Gagal memuat video:", e);
@@ -89,7 +90,6 @@
     }
 
     document.addEventListener('shaka-ui-loaded', initPlayer);
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!window['shaka']) console.error("Shaka Library tidak terdeteksi!");
-    });
+    document.addEventListener('DOMContentLoaded', initPlayer);
+</script>
 </script>

@@ -1,40 +1,103 @@
-<script>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>Shaka Player - Fullscreen 16:9</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/shaka-player.ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/controls.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: black;
+            touch-action: none;
+            overscroll-behavior: contain;
+        }
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: black;
+        }
+        #video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background: black;
+        }
+        /* Pastikan kontrol tetap ada saat disentuh */
+        .shaka-controls-container {
+            opacity: 1 !important;
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
 
-<!-- CSS FULL LAYAR -->
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
 
-document.write(unescape('%3Cdiv%20class%3D%22video-container%22%3E%0A%20%20%3Cscript%20src%3D%22//content.jwplatform.com/libraries/SAHhwvZq.js%22%3E%3C/script%3E%0A%20%20%3Cstyle%3E%0A%20%20%20%20body%20%7B%0A%20%20%20%20%20%20%20%20width%3A100%25%3B%0A%20%20%20%20%20%20%20%20height%3A%20100%25%3B%0A%20%20%20%20%20%20%20%20font-family%3A%20Poppins%3B%0A%20%20%20%20%20%20%20%20display%3Ablock%3B%0A%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20padding%3A%200px%3B%0A%20%20%20%20%20%20%20%20margin%3A%200px%3B%0A%20%20%20%20%20%20%20%20background%3A%20%23000%3B%0A%20%20%20%20%7D%0A%20%20%20%20player%7B%0A%20%20%20%20%20%20%20%20width%3A100%25%3B%0A%20%20%20%20%20%20%20%20height%3A%20100%25%3B%0A%20%20%20%20%20%20%09position%3A%20top%3B%0A%20%20%20%20%20%20%20%20display%3Ainline-block%3B%0A%20%20%20%20%20%20%20%20-webkit-user-select%3Anone%3B%0A%20%20%20%20%20%20%20%20-moz-user-select%3Anone%3B%0A%20%20%20%20%20%20%20%20-ms-user-select%3Anone%3B%0A%20%20%20%20%20%20%20%20user-select%3Anone%3B%0A%20%20%20%20%7D%0A%20a%2C%20a%3Ahover%2C%20a%3Afocus%2C%20a%3Aactive%20%7B%0A%20%20%20%20%20%20text-decoration%3A%20none%3B%0A%20%7D%0A%0A%3C/style%3E%0A%20%20%20%20%3Cstyle%3E%0A%20%20%20%20%20%20%20%20div%20a%20img%7Bvisibility%3Ahidden%3B%7D%0Abody%3A%3Abefore%20%7B%0A%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20top%3A%205px%3B%0A%20%20%20%20%20%20%20%20right%3A%205px%3B%0A%20%20%20%20%20%20%20%20z-index%3A%2010%3B%0A%20%20%20%20%20%20%20%20content%3A%20%27%27%3B%0A%20%20%20%20%20%20%20%20height%3A%2070px%3B%0A%20%20%20%20%20%20%20%20width%3A%20110px%3B%0A%20%20%20%20%20%20%20%20background%3A%20url%28%27%20%27%29%20no-repeat%3B%0A%20%20%20%20%20%20%20%20background-size%3A%20110px%20auto%2C%20auto%3B%0A%20%20%20%20%20%20%20%20opacity%3A%200.4%3B%0A%20%20%20%20%7D%0A.logo-overlay%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20bottom%3A%205px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20right%3A%2010px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20width%3A%20100px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20height%3A%20auto%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20opacity%3A%202.0%3B%0A%20%20%20%20%20%20%20%20%7D%0A%3C/style%3E'));
+    <script>
+        async function initPlayer() {
+            const video = document.getElementById('video');
+            const videoContainer = document.querySelector('.video-container');
+            const ui = new shaka.ui.Overlay(new shaka.Player(video), videoContainer, video);
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
 
-</script>
+            player.configure({
+                drm: {
+                    clearKeys: {
+                        "3fb40d85724942f994d86943f48021db": "a6da8742502c8a2153067f5f2a70fb02"
+                    }
+                }
+            });
 
+            try {
+                await player.load("https://mag04.tvx.prd.tv.odido.nl/wh7f454c46tw865586829_-819821292/PLTV/86/224/3221241610/3221241610.mpd?accountinfo=~~V2.0~LNS2PBO5tyhp5z1Pe6ObBA6cd7a4ec35c4492167b9376e6dff2932~BZw2dESHw-I1PQCFh9gGxCMvrIIzgMdYAe900qj8l6aoXUX9ahyR6I9EUIu7nDR4f4887615c83ea7a8cee6dd33137c4ebe:UTC,");
+                console.log("Video siap diputar!");
+                video.muted = false; // Auto-unmute
+                video.play(); // Paksa play jika diperlukan
+            } catch (e) {
+                console.error("Gagal memuat video:", e);
+            }
 
-<div id="player"></div>
+            // Pastikan kontrol muncul saat disentuh
+            videoContainer.addEventListener("click", () => {
+                document.querySelector(".shaka-controls-container").style.opacity = "1";
+            });
 
-<script>
+            // Sembunyikan kontrol setelah beberapa detik tidak digunakan
+            let timeout;
+            videoContainer.addEventListener("mousemove", () => {
+                clearTimeout(timeout);
+                document.querySelector(".shaka-controls-container").style.opacity = "1";
+                timeout = setTimeout(() => {
+                    document.querySelector(".shaka-controls-container").style.opacity = "0";
+                }, 3000); // Sembunyikan setelah 3 detik tidak digunakan
+            });
+        }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            initPlayer();
+        });
 
-    var playerInstance = jwplayer("player");
+    </script>
 
-
-    playerInstance.setup({
-
-
-        playlist: [{
-
-            "title": "CHENX DAYAT TV",
-
-            "sources": [
-
-                {
-
-                    "default": false,
-
-                    "type": "dash",
-
-                    "file":"https://dash2.antik.sk/stream/nvidia_nova_sport2/playlist_cenc.mpd'',
-
-                    "drm": {
-
-                        "clearkey": { "11223344556677889900112233445566": "", "4b80724d0ef86bcb2c21f7999d67739d": "" }
+</body>
+</html>                        "clearkey": { "11223344556677889900112233445566": "", "4b80724d0ef86bcb2c21f7999d67739d": "" }
 
                     },
 

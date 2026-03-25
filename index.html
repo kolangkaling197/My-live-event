@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
-    <title>Shaka Player - Fullscreen 16:9</title>
+    <title>MNCTV Live - DASH DRM</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/controls.min.css">
     <style>
@@ -17,7 +17,7 @@
             height: 100%;
             background: black;
             touch-action: none;
-            overscroll-behavior: contain;
+            overflow: hidden;
         }
         .video-container {
             position: fixed;
@@ -34,67 +34,94 @@
             width: 100vw;
             height: 100vh;
             object-fit: contain;
-            background: black;
         }
-        /* Pastikan kontrol tetap ada saat disentuh */
+        /* Custom UI Style */
         .shaka-controls-container {
             opacity: 1 !important;
-            transition: opacity 0.3s ease;
         }
     </style>
 </head>
 <body>
 
-    <div class="video-container">
-        <video id="video" autoplay playsinline></video>
+    <div class="video-container" data-shaka-player-container>
+        <video id="video" data-shaka-player autoplay playsinline></video>
     </div>
 
     <script>
+        // DATA ASLI VISION PLUS (MNCTV)
+        const manifestUrl = "https://d2xz2v5wuvgur6.cloudfront.net/out/v1/d6b026ad50f14b7f9af5ddd5450007d4/index.mpd";
+        const drmConfig = {
+            "c3004565365a42d08e3bde39a516d64e": "dbfdc0967cfbbed01dba730c99d9c14a"
+        };
+
         async function initPlayer() {
             const video = document.getElementById('video');
             const videoContainer = document.querySelector('.video-container');
-            const ui = new shaka.ui.Overlay(new shaka.Player(video), videoContainer, video);
-            const controls = ui.getControls();
-            const player = controls.getPlayer();
+            
+            // Inisialisasi Player & UI
+            const player = new shaka.Player(video);
+            const ui = new shaka.ui.Overlay(player, videoContainer, video);
 
+            // KONFIGURASI DRM CLEARKEY
             player.configure({
                 drm: {
-                    clearKeys: {
-                        "c3004565365a42d08e3bde39a516d64e": "dbfdc0967cfbbed01dba730c99d9c14a"
-                    }
+                    clearKeys: drmConfig
+                },
+                streaming: {
+                    lowLatencyMode: true,
+                    jumpLargeGaps: true
+                }
+            });
+
+            // PENTING: Menangani Header agar tidak di-block (Hanya bekerja jika CORS diizinkan)
+            player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
+                    type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    
+                    // Kita tambahkan Header Referer lewat Proxy jika Anda menjalankan ini di Web
+                    // Jika menjalankan lokal, beberapa browser mungkin memblokir modifikasi Header
+                    request.headers['Referer'] = 'https://www.rctiplus.com/';
+                }
+            });
+
+            // Error Handling
+            player.addEventListener('error', (event) => {
+                console.error("Shaka Error:", event.detail);
+                if (event.detail.code === 1001) {
+                    alert("Error 403: Akses ditolak CloudFront. Pastikan Anda pakai IP Indonesia atau Proxy Worker.");
                 }
             });
 
             try {
-                await player.load("https://d2xz2v5wuvgur6.cloudfront.net/out/v1/d6b026ad50f14b7f9af5ddd5450007d4/index.mpd");
-                console.log("Video siap diputar!");
-                video.muted = false; // Auto-unmute
-                video.play(); // Paksa play jika diperlukan
+                await player.load(manifestUrl);
+                console.log("MNCTV Berhasil Dimuat!");
+                video.muted = false;
             } catch (e) {
                 console.error("Gagal memuat video:", e);
             }
 
-            // Pastikan kontrol muncul saat disentuh
-            videoContainer.addEventListener("click", () => {
-                document.querySelector(".shaka-controls-container").style.opacity = "1";
-            });
-
-            // Sembunyikan kontrol setelah beberapa detik tidak digunakan
+            // Kontrol Otomatis Sembunyi
             let timeout;
             videoContainer.addEventListener("mousemove", () => {
-                clearTimeout(timeout);
-                document.querySelector(".shaka-controls-container").style.opacity = "1";
-                timeout = setTimeout(() => {
-                    document.querySelector(".shaka-controls-container").style.opacity = "0";
-                }, 3000); // Sembunyikan setelah 3 detik tidak digunakan
+                const controls = document.querySelector(".shaka-controls-container");
+                if (controls) {
+                    clearTimeout(timeout);
+                    controls.style.opacity = "1";
+                    timeout = setTimeout(() => {
+                        controls.style.opacity = "0";
+                    }, 3000);
+                }
             });
         }
 
+        // Jalankan saat library siap
+        document.addEventListener('shaka-ui-loaded', initPlayer);
         document.addEventListener('DOMContentLoaded', () => {
-            initPlayer();
+            if (!window['shaka']) {
+                console.error("Shaka Library tidak terdeteksi!");
+            }
         });
-
     </script>
 
 </body>
-</html> 
+</html>

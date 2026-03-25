@@ -48,80 +48,48 @@
     </div>
 
     <script>
-        // DATA ASLI VISION PLUS (MNCTV)
-        const manifestUrl = "https://d2xz2v5wuvgur6.cloudfront.net/out/v1/d6b026ad50f14b7f9af5ddd5450007d4/index.mpd";
-        const drmConfig = {
-            "c3004565365a42d08e3bde39a516d64e": "dbfdc0967cfbbed01dba730c99d9c14a"
-        };
+    // URL Worker Anda (PASTIKAN SUDAH SESUAI)
+    const workerUrl = "https://superhyper.asique121212.workers.dev/?proxy=";
+    
+    // Link asli MNCTV
+    const manifestUrl = "https://d2xz2v5wuvgur6.cloudfront.net/out/v1/d6b026ad50f14b7f9af5ddd5450007d4/index.mpd";
+    
+    const drmConfig = {
+        "c3004565365a42d08e3bde39a516d64e": "dbfdc0967cfbbed01dba730c99d9c14a"
+    };
 
-        async function initPlayer() {
-            const video = document.getElementById('video');
-            const videoContainer = document.querySelector('.video-container');
-            
-            // Inisialisasi Player & UI
-            const player = new shaka.Player(video);
-            const ui = new shaka.ui.Overlay(player, videoContainer, video);
+    async function initPlayer() {
+        const video = document.getElementById('video');
+        const videoContainer = document.querySelector('.video-container');
+        
+        const player = new shaka.Player(video);
+        const ui = new shaka.ui.Overlay(player, videoContainer, video);
 
-            // KONFIGURASI DRM CLEARKEY
-            player.configure({
-                drm: {
-                    clearKeys: drmConfig
-                },
-                streaming: {
-                    lowLatencyMode: true,
-                    jumpLargeGaps: true
-                }
-            });
-
-            // PENTING: Menangani Header agar tidak di-block (Hanya bekerja jika CORS diizinkan)
-            player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
-                    type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                    
-                    // Kita tambahkan Header Referer lewat Proxy jika Anda menjalankan ini di Web
-                    // Jika menjalankan lokal, beberapa browser mungkin memblokir modifikasi Header
-                    request.headers['Referer'] = 'https://www.rctiplus.com/';
-                }
-            });
-
-            // Error Handling
-            player.addEventListener('error', (event) => {
-                console.error("Shaka Error:", event.detail);
-                if (event.detail.code === 1001) {
-                    alert("Error 403: Akses ditolak CloudFront. Pastikan Anda pakai IP Indonesia atau Proxy Worker.");
-                }
-            });
-
-            try {
-                await player.load(manifestUrl);
-                console.log("MNCTV Berhasil Dimuat!");
-                video.muted = false;
-            } catch (e) {
-                console.error("Gagal memuat video:", e);
-            }
-
-            // Kontrol Otomatis Sembunyi
-            let timeout;
-            videoContainer.addEventListener("mousemove", () => {
-                const controls = document.querySelector(".shaka-controls-container");
-                if (controls) {
-                    clearTimeout(timeout);
-                    controls.style.opacity = "1";
-                    timeout = setTimeout(() => {
-                        controls.style.opacity = "0";
-                    }, 3000);
-                }
-            });
-        }
-
-        // Jalankan saat library siap
-        document.addEventListener('shaka-ui-loaded', initPlayer);
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!window['shaka']) {
-                console.error("Shaka Library tidak terdeteksi!");
+        player.configure({
+            drm: {
+                clearKeys: drmConfig
             }
         });
-    </script>
 
-</body>
-</html>
+        // FILTER PENTING: Mengarahkan semua request manifest & segment lewat Cloudflare Worker
+        player.getNetworkingEngine().registerRequestFilter((type, request) => {
+            // Bungkus URL asli ke dalam URL Worker
+            const originalUrl = request.uris[0];
+            request.uris[0] = workerUrl + encodeURIComponent(originalUrl);
+        });
+
+        try {
+            // Muat manifest melalui worker
+            await player.load(workerUrl + encodeURIComponent(manifestUrl));
+            console.log("MNCTV Berhasil Dimuat via Proxy!");
+            video.muted = false;
+        } catch (e) {
+            console.error("Gagal memuat video:", e);
+        }
+    }
+
+    document.addEventListener('shaka-ui-loaded', initPlayer);
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window['shaka']) console.error("Shaka Library tidak terdeteksi!");
+    });
+</script>
